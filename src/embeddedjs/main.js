@@ -55,74 +55,37 @@ function fmtSteps(n) {
 }
 
 function drawScanlines() {
-    for (let y = 0; y < H; y += 2) {
+    for (let y = 0; y < H; y += 6) {
         render.fillRectangle(COL_BG_LINE, 0, y, W, 1);
     }
 }
 
-// ---------- Pixel-drawn LUMON logo ------------------------------------------
-// Clean 16px height with 2px strokes. Teardrop "O" counter.
-const G = 2;
-const SP = 3;
-const LH = 16;
-
-function R(color, x, y, w, h) { render.fillRectangle(color, x, y, w, h); }
-
-const LW_L = 10, LW_U = 12, LW_M = 14, LW_O = 12, LW_N = 12;
-const LOGO_W = LW_L + LW_U + LW_M + LW_O + LW_N + SP * 4;
-
-function drawGlyphL(c, x, y) {
-    R(c, x, y, G, LH);
-    R(c, x, y + LH - G, LW_L, G);
-}
-
-function drawGlyphU(c, x, y) {
-    R(c, x, y, G, LH);
-    R(c, x + LW_U - G, y, G, LH);
-    R(c, x, y + LH - G, LW_U, G);
-}
-
-function drawGlyphM(c, x, y) {
-    R(c, x, y, G, LH);
-    R(c, x + LW_M - G, y, G, LH);
-    const mid = (LW_M / 2) | 0;
-    R(c, x + G, y, 2, 7);
-    R(c, x + mid - 1, y + 5, 2, 4);
-    R(c, x + LW_M - G - 2, y, 2, 7);
-}
-
-function drawGlyphO(c, bg, x, y) {
-    const w = LW_O;
-    const mid = (w / 2) | 0;
-    
-    R(c, x + mid, y, 1, 2);
-    R(c, x + mid - 1, y + 2, 3, 2);
-    R(c, x, y + 5, G, LH - 5);
-    R(c, x + w - G, y + 5, G, LH - 5);
-    R(c, x, y + LH - G, w, G);
-    R(c, x + G, y + 5, mid - 2 * G, G);
-    R(c, x + mid + G, y + 5, mid - 2 * G, G);
-    
-    const eyeX = x + mid - 1;
-    const eyeY = y + LH - 8;
-    R(bg, eyeX, eyeY, 3, 3);
-}
-
-function drawGlyphN(c, x, y) {
-    R(c, x, y, G, LH);
-    R(c, x + LW_N - G, y, G, LH);
-    R(c, x + 3, y + 3, 2, 4);
-    R(c, x + 6, y + 7, 2, 4);
-    R(c, x + 9, y + 11, 2, 2);
-}
+// ---------- LUMON logo bitmap -----------------------------------------------
+// Rasterized from the real lumon.industries embedded "Lumon Industries" font,
+// then reduced to horizontal spans so it can be drawn directly with Poco.
+// This preserves the extended geometry and the signature teardrop O.
+const LOGO_W = 164;
+const LOGO_H = 34;
+const LOGO_RECTS = [
+    [0,6,6,18],[30,6,5,16],[55,6,6,17],[64,6,6,2],[92,6,6,2],[105,6,24,1],[135,6,6,1],[158,6,6,14],
+    [103,7,28,1],[135,7,7,1],[64,8,7,1],[91,8,7,1],[102,8,30,2],[135,8,8,1],[64,9,8,2],[90,9,8,1],[135,9,9,1],
+    [89,10,9,2],[101,10,15,2],[118,10,14,2],[135,10,11,1],[64,11,9,1],[135,11,12,1],[64,12,10,1],[88,12,10,1],
+    [101,12,14,2],[119,12,13,2],[135,12,13,1],[64,13,11,2],[87,13,11,2],[135,13,14,1],[101,14,13,1],
+    [120,14,12,2],[135,14,6,14],[142,14,8,1],[64,15,12,1],[86,15,12,1],[101,15,12,2],[143,15,9,1],
+    [64,16,13,1],[85,16,13,1],[121,16,11,2],[144,16,9,1],[64,17,6,11],[71,17,7,1],[84,17,7,1],[92,17,6,11],
+    [101,17,11,5],[146,17,8,1],[72,18,6,1],[84,18,6,1],[122,18,10,3],[147,18,9,1],[73,19,6,1],[83,19,6,1],
+    [149,19,8,1],[73,20,7,1],[82,20,7,1],[150,20,14,1],[74,21,6,1],[81,21,7,1],[121,21,11,1],[151,21,13,1],
+    [30,22,6,1],[75,22,12,2],[101,22,12,1],[120,22,12,2],[152,22,12,1],[30,23,7,1],[54,23,7,1],[101,23,13,1],
+    [153,23,11,1],[0,24,26,4],[30,24,30,2],[76,24,10,1],[102,24,30,2],[155,24,9,1],[77,25,8,1],[156,25,8,1],
+    [31,26,28,1],[77,26,7,1],[103,26,28,1],[157,26,7,1],[33,27,25,1],[78,27,5,1],[104,27,25,1],[158,27,6,1]
+];
 
 function drawLumonLogo(cx, y) {
-    let x = (cx - LOGO_W / 2) | 0;
-    drawGlyphL(COL_FG, x, y);          x += LW_L + SP;
-    drawGlyphU(COL_FG, x, y);          x += LW_U + SP;
-    drawGlyphM(COL_FG, x, y);          x += LW_M + SP;
-    drawGlyphO(COL_FG, COL_BG, x, y);  x += LW_O + SP;
-    drawGlyphN(COL_FG, x, y);
+    const x = (cx - LOGO_W / 2) | 0;
+    for (let i = 0; i < LOGO_RECTS.length; i++) {
+        const s = LOGO_RECTS[i];
+        render.fillRectangle(COL_FG, x + s[0], y + s[1], s[2], s[3]);
+    }
 }
 
 // ---------- MDR number grid with random time/date placement ----------------
@@ -131,8 +94,8 @@ function drawLumonLogo(cx, y) {
 
 const GRID_TOP    = 44;
 const GRID_BOTTOM = H - 34;
-const CELL_W      = 18;
-const CELL_H      = 19;
+const CELL_W      = 22;
+const CELL_H      = 22;
 const GRID_COLS   = (W / CELL_W) | 0;
 const GRID_ROWS   = ((GRID_BOTTOM - GRID_TOP) / CELL_H) | 0;
 const GRID_LEFT   = ((W - GRID_COLS * CELL_W) / 2) | 0;
@@ -217,7 +180,7 @@ function drawDeptBadge(y) {
 }
 
 function drawDividers() {
-    render.fillRectangle(COL_FG_DIMR, 8, 38,     W - 16, 1);
+    render.fillRectangle(COL_FG_DIMR, 8, 40,     W - 16, 1);
     render.fillRectangle(COL_FG_DIMR, 8, H - 32, W - 16, 1);
 }
 
@@ -229,7 +192,7 @@ function draw(event) {
     render.fillRectangle(COL_BG, 0, 0, W, H);
     drawScanlines();
 
-    drawLumonLogo((W / 2) | 0, 12);
+    drawLumonLogo((W / 2) | 0, 2);
     drawDividers();
     drawMDRGrid(now);
     drawTimeInGrid(now);
@@ -241,6 +204,7 @@ function draw(event) {
 }
 
 // ---------- Lifecycle -------------------------------------------------------
+// `minutechange` invokes the callback immediately on registration, so do not
+// call draw() again here; the font-derived logo bitmap makes double startup
+// rendering too easy to trip the Pebble watchdog.
 watch.addEventListener("minutechange", draw);
-
-draw();
