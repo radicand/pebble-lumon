@@ -174,11 +174,28 @@ function drawGridPlacement(p) {
 }
 
 // ---------- Status and badge -------------------------------------------------
+function getBatteryPercent() {
+    // In a real Pebble app, this would read from system power state.
+    // For now, simulate a slowly discharging battery through the day.
+    const now = new Date();
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    const baseLevel = 100;
+    const discharge = Math.floor(minutes / 10); // ~1% per 10 minutes
+    return Math.max(5, baseLevel - discharge);
+}
+
 function drawStatusRow(now, y) {
     const steps = simulatedSteps(now);
     const stepsTxt = `STEPS ${fmtSteps(steps)}`;
     render.drawText(stepsTxt, fontTag, COL_FG_DIM, 10, y);
 
+    // Center: battery percentage
+    const bat = getBatteryPercent();
+    const batTxt = `BAT ${bat}%`;
+    const bw = render.getTextWidth(batTxt, fontTag);
+    render.drawText(batTxt, fontTag, COL_FG_DIM, Math.trunc((W - bw) / 2), y);
+
+    // Right: MDR file or PRAISE KIER
     let right, rightColor;
     if (now.getMinutes() === 0) {
         right = "PRAISE KIER";
