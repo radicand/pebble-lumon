@@ -37,7 +37,29 @@ function dayHash(now) {
     return (h >>> 0);
 }
 
-function simulatedSteps(now) {
+function getStepsForDay(now) {
+    // Try to get real step count from system health/activity API
+    try {
+        // Moddable/Pebble health module
+        if (globalThis.health?.steps !== undefined) {
+            return Math.floor(globalThis.health.steps);
+        }
+    } catch {}
+    try {
+        // Some environments expose it through a health/activity module
+        const health = require("health");
+        if (health?.steps !== undefined) {
+            return Math.floor(health.steps);
+        }
+    } catch {}
+    try {
+        // Alternative: device.steps
+        const device = require("device");
+        if (device?.health?.steps !== undefined) {
+            return Math.floor(device.health.steps);
+        }
+    } catch {}
+    // Fallback: simulate based on time of day
     const totalForDay = 8500 + (dayHash(now) % 3500);
     const minutes = now.getHours() * 60 + now.getMinutes();
     const t = minutes / 1440;
@@ -46,6 +68,10 @@ function simulatedSteps(now) {
     if (x < 0) x = 0; else if (x > 1) x = 1;
     const s = x * x * (3 - 2 * x);
     return Math.floor(totalForDay * s);
+}
+
+function simulatedSteps(now) {
+    return getStepsForDay(now);
 }
 
 function fmtSteps(n) {
