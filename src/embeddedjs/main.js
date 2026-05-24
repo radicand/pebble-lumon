@@ -175,12 +175,25 @@ function drawGridPlacement(p) {
 
 // ---------- Status and badge -------------------------------------------------
 function getBatteryPercent() {
-    // In a real Pebble app, this would read from system power state.
-    // For now, simulate a slowly discharging battery through the day.
+    // Try to get real battery percentage from system power state.
+    try {
+        // Moddable/Pebble may expose power info through global or device modules
+        if (globalThis.power?.battery !== undefined) {
+            return Math.round(globalThis.power.battery * 100);
+        }
+    } catch {}
+    try {
+        // Some environments expose it through a device module
+        const device = require("device");
+        if (device?.power?.battery !== undefined) {
+            return Math.round(device.power.battery * 100);
+        }
+    } catch {}
+    // Fallback: simulate battery discharge based on time of day
     const now = new Date();
     const minutes = now.getHours() * 60 + now.getMinutes();
     const baseLevel = 100;
-    const discharge = Math.floor(minutes / 10); // ~1% per 10 minutes
+    const discharge = Math.floor(minutes / 10);
     return Math.max(5, baseLevel - discharge);
 }
 
@@ -188,12 +201,6 @@ function drawStatusRow(now, y) {
     const steps = simulatedSteps(now);
     const stepsTxt = `STEPS ${fmtSteps(steps)}`;
     render.drawText(stepsTxt, fontTag, COL_FG_DIM, 10, y);
-
-    // Center: battery percentage
-    const bat = getBatteryPercent();
-    const batTxt = `BAT ${bat}%`;
-    const bw = render.getTextWidth(batTxt, fontTag);
-    render.drawText(batTxt, fontTag, COL_FG_DIM, Math.trunc((W - bw) / 2), y);
 
     // Right: MDR file or PRAISE KIER
     let right, rightColor;
@@ -209,10 +216,16 @@ function drawStatusRow(now, y) {
     render.drawText(right, fontTag, rightColor, W - rw - 10, y);
 }
 
-function drawDeptBadge(y) {
+function drawBatteryAndBadge(y) {
+    // Left: battery percentage
+    const bat = getBatteryPercent();
+    const batTxt = `BAT ${bat}%`;
+    render.drawText(batTxt, fontTag, COL_FG_DIM, 10, y);
+
+    // Right: DEPT MDR badge
     const badge = "DEPT MDR";
     const bw = render.getTextWidth(badge, fontTag);
-    render.drawText(badge, fontTag, COL_FG_DIMR, Math.trunc((W - bw) / 2), y);
+    render.drawText(badge, fontTag, COL_FG_DIMR, W - bw - 10, y);
 }
 
 function drawDividers() {
@@ -234,7 +247,7 @@ function draw(event) {
     drawMDRGrid(now, placements);
     for (const p of placements) drawGridPlacement(p);
     drawStatusRow(now, H - 28);
-    drawDeptBadge(H - 14);
+    drawBatteryAndBadge(H - 14);
 
     render.end();
 }
