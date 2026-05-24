@@ -79,7 +79,7 @@ On a real Pebble device with proper SDK support, the watchface will display actu
 
 ## Inspiration
 
-This watchface is inspired by the **Lumon Industries intranet terminal** from HBO's *Severance*. The show features a dystopian corporation with heavily segregated employees ("innies" and "outies") who work in the mysterious Macrodata Refinement (MDR) department, analyzing data on grid-based terminals without knowing what they're processing.
+This watchface is inspired by the **Lumon Industries MDR terminal** from *Severance*. The show features a dystopian corporation with heavily segregated employees ("innies" and "outies") who work in the mysterious Macrodata Refinement (MDR) department, analyzing data on grid-based terminals without knowing what they're processing.
 
 ## Resources
 
