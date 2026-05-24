@@ -1,7 +1,7 @@
 {
   "name": "lumontime",
   "author": "Lumon Industries",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "keywords": ["pebble-app"],
   "private": true,
   "dependencies": {},
@@ -12,8 +12,7 @@
     "sdkVersion": "3",
     "enableMultiJS": true,
     "targetPlatforms": [
-      "emery",
-      "gabbro"
+      "emery"
     ],
     "watchapp": {
       "watchface": true
