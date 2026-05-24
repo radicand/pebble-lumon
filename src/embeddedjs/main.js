@@ -7,8 +7,8 @@ const H = render.height;
 let batterySensor;
 
 const COL_BG = render.makeColor(0, 29, 47);
-const COL_FG = render.makeColor(189, 255, 255);
-const COL_DIM = render.makeColor(60, 120, 140);
+const COL_FG = render.makeColor(225, 255, 255);
+const COL_DIM = render.makeColor(95, 170, 185);
 const fontSmall = new render.Font("Gothic-Bold", 14);
 const fontMid = new render.Font("Leco-Bold", 20);
 const fontDate = new render.Font("Gothic-Bold", 18);
@@ -34,9 +34,11 @@ const LOGO_RECTS = [
 
 function drawLumonLogo(cx, y) {
     const x = Math.floor(cx - LOGO_W / 2);
-    for (let i = 0; i < LOGO_RECTS.length; i++) {
+    let i = 0;
+    while (i < LOGO_RECTS.length) {
         const s = LOGO_RECTS[i];
         render.fillRectangle(COL_FG, x + s[0], y + s[1], s[2], s[3]);
+        i++;
     }
 }
 
@@ -61,10 +63,12 @@ function cellDigit(col, row, seed) {
     return h % 10;
 }
 
-function drawMDRGrid(now) {
+function drawMDRGrid(now, occupiedCells) {
     const seed = now.getHours() * 60 + now.getMinutes();
     for (let row = 0; row < GRID_ROWS; row++) {
         for (let col = 0; col < GRID_COLS; col++) {
+            const cellKey = row + ':' + col;
+            if (occupiedCells && occupiedCells.has(cellKey)) continue;
             const d = "" + cellDigit(col, row, seed);
             const cx = GRID_LEFT + col * CELL_W + Math.floor(CELL_W / 2);
             const cy = GRID_TOP + row * CELL_H + Math.floor(CELL_H / 2);
@@ -89,13 +93,27 @@ function drawGridText(text, row, col, fontToUse) {
     }
 }
 
-function drawDateTimeInGrid(now) {
+function getDateTimeOccupiedCells(now) {
     const seed = now.getHours() * 60 + now.getMinutes();
     const time = two(now.getHours()) + ":" + two(now.getMinutes());
     const date = DAYS[now.getDay()] + MONTHS[now.getMonth()] + two(now.getDate());
     const timePos = randomGridPos(seed, 0x12345678, GRID_ROWS, GRID_COLS - time.length + 1);
-    const datePos = randomGridPos(seed, 0xABCDEF00, GRID_ROWS, GRID_COLS - date.length + 1);
+    const datePos = randomGridPos(seed, 0xABCDEF00, GRID_ROWS - 1, GRID_COLS - date.length + 1);
+    if (datePos.row >= timePos.row) datePos.row++;
 
+    const occupied = new Set();
+    for (let i = 0; i < time.length; i++) {
+        occupied.add(timePos.row + ':' + (timePos.col + i));
+    }
+    for (let i = 0; i < date.length; i++) {
+        occupied.add(datePos.row + ':' + (datePos.col + i));
+    }
+
+    return { time, date, timePos, datePos, occupied };
+}
+
+function drawDateTimeInGrid(now) {
+    const { time, date, timePos, datePos } = getDateTimeOccupiedCells(now);
     drawGridText(time, timePos.row, timePos.col, fontMid);
     drawGridText(date, datePos.row, datePos.col, fontDate);
 }
@@ -120,9 +138,14 @@ function getBatteryPercent() {
         if (!batterySensor) batterySensor = new Battery({});
         const sample = batterySensor.sample();
         return sample ? sample.percent : -1;
-    } catch (e) {
+    } catch {
         return -1;
     }
+}
+
+function getEventDate(event) {
+    if (!event) return null;
+    return event.date;
 }
 
 function drawStatusRows(now) {
@@ -150,13 +173,17 @@ function drawStatusRows(now) {
 }
 
 function draw(event) {
-    const now = (event && event.date) ? event.date : new Date();
+    let now = getEventDate(event);
+    if (!now) {
+        now = new Date();
+    }
 
     render.begin();
     render.fillRectangle(COL_BG, 0, 0, W, H);
     drawLumonLogo(Math.floor(W / 2), 2);
     drawDividers();
-    drawMDRGrid(now);
+    const dateTimeInfo = getDateTimeOccupiedCells(now);
+    drawMDRGrid(now, dateTimeInfo.occupied);
     drawDateTimeInGrid(now);
     drawStatusRows(now);
     render.end();

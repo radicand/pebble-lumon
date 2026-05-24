@@ -6,20 +6,19 @@ A fully-featured Pebble Time watchface styled after **Lumon Industries** from th
 
 ### Visual Design
 - **Rasterized Lumon Logo** — Rendered from the official `lumon.industries` embedded font, preserving the distinctive extended letterforms and signature teardrop "O"
-- **CRT Scanlines** — Authentic retro terminal effect with vertical scan lines
-- **MDR Data Grid** — Full-screen grid of pseudo-random digits (Macrodata Refinement style) with time and date embedded as grid cells
-- **Authentic Palette** — Cyan-on-dark color scheme matching the Lumon Industries intranet terminal (`#BDFFFF` on `#001D2F`)
+- **MDR Data Grid** — Full-screen grid of pseudo-random digits (Macrodata Refinement style); time and date replace grid cells at randomized positions each minute
+- **Bright Cyan Palette** — High-contrast cyan-on-dark color scheme inspired by Lumon Industries intranet terminals
 
 ### Data Display
 
 #### Real-Time (Live on Device)
-- **Time** — Current hour and minute, displayed in random grid cells
-- **Date** — Current day/month/year, displayed in random grid cells (different position than time each minute)
-- **Step Count** — Reads from device health API; falls back to simulated progression
-- **Battery Percentage** — Reads from device power state; falls back to simulated discharge
+- **Time** — Current hour and minute, replaces grid cells at a randomized position each minute
+- **Date** — Current day/month/year, replaces grid cells at a randomized position (guaranteed different row from time)
+- **Step Count** — Unavailable (Alloy SDK does not expose Pebble Health API)
+- **Battery Percentage** — Real-time battery level via Alloy `embedded:sensor/Battery`
 
 #### Status Row (Top)
-- **Left:** `STEPS` — Daily step count formatted as `X`, `X.Xk`, or `Xk`
+- **Left:** `STEPS` — Displays `--` (not currently available in Alloy SDK)
 - **Right:** Rotating **MDR file codename** (one of 20 from the show), or `PRAISE KIER` at the top of each hour
 
 #### Badge Row (Bottom)
@@ -55,27 +54,18 @@ pebble screenshot --emulator emery
 
 ## Technical Details
 
-### Real Data Fallback Strategy
+### Data Sources
 
-**Steps:**
-1. Try `globalThis.health.steps`
-2. Try `require("health").steps`
-3. Try `require("device").health.steps`
-4. Fall back to time-based simulation (~8.5k steps/day with variation)
+**Battery** — Uses Alloy's documented `embedded:sensor/Battery` API for real-time device power state.
 
-**Battery:**
-1. Try `globalThis.power.battery`
-2. Try `require("device").power.battery`
-3. Fall back to simulated discharge (~1% per 10 minutes)
-
-On a real Pebble device with proper SDK support, the watchface will display actual health and power data. On emulators or unsupported environments, it gracefully falls back to realistic simulations.
+**Steps** — Not currently available; the Alloy/Moddable SDK does not expose the Pebble Health API (`health_service_sum_today`) to watchface JavaScript code.
 
 ### Architecture
 
 - **Logo** — Bitmap rasterized from `lumon.industries` font, encoded as compact Poco rectangles (87 rectangles, ~40 bytes)
-- **Grid** — Deterministic pseudo-random digits seeded by cell position + time; time and date cells are reserved and drawn separately with larger fonts
-- **Time/Date Placement** — Pseudo-random but deterministic per minute; uses separate salts to avoid overlap
-- **Rendering** — Optimized for Pebble watchdog (~6-scanline intervals, sparse grid cells to keep frame budget low)
+- **Grid** — Deterministic pseudo-random digits seeded by cell position + time
+- **Date/Time Overlay** — Pseudo-random deterministic placement per minute; occupies grid cells instead of overlaying them; uses separate salts to ensure date and time never occupy the same row
+- **Rendering** — Optimized to minimize frame updates; grid cells are skipped where date/time text appears
 
 ## Inspiration
 
