@@ -93,8 +93,8 @@ function drawLumonLogo(cx, y) {
 
 const GRID_TOP    = 44;
 const GRID_BOTTOM = H - 34;
-const CELL_W      = 22;
-const CELL_H      = 22;
+const CELL_W      = 18;
+const CELL_H      = 19;
 const GRID_COLS   = Math.trunc(W / CELL_W);
 const GRID_ROWS   = Math.trunc((GRID_BOTTOM - GRID_TOP) / CELL_H);
 const GRID_LEFT   = Math.trunc((W - GRID_COLS * CELL_W) / 2);
@@ -107,10 +107,19 @@ function cellDigit(col, row, seed) {
     return h % 10;
 }
 
-function drawMDRGrid(now) {
+function isReservedCell(row, col, placements) {
+    for (const p of placements) {
+        if (row === p.row && col >= p.col && col < p.col + p.text.length) return true;
+    }
+    return false;
+}
+
+function drawMDRGrid(now, placements) {
     const seed = now.getHours() * 60 + now.getMinutes();
     for (let row = 0; row < GRID_ROWS; row++) {
         for (let col = 0; col < GRID_COLS; col++) {
+            if (isReservedCell(row, col, placements)) continue;
+
             const d = String(cellDigit(col, row, seed));
             const cx = GRID_LEFT + col * CELL_W + Math.trunc(CELL_W / 2);
             const cy = GRID_TOP + row * CELL_H + Math.trunc(CELL_H / 2);
@@ -128,29 +137,40 @@ function randomGridPos(seed, offsetSalt, maxRow, maxCol) {
     return { row, col };
 }
 
-function drawTimeInGrid(now) {
-    const seed = now.getHours() * 60 + now.getMinutes();
-    const pos = randomGridPos(seed, 0x12345678, Math.max(1, GRID_ROWS - 1), Math.max(1, GRID_COLS - 2));
-    
-    const hh = String(now.getHours()).padStart(2, "0");
-    const mm = String(now.getMinutes()).padStart(2, "0");
-    
-    const x = GRID_LEFT + pos.col * CELL_W + 2;
-    const y = GRID_TOP + pos.row * CELL_H + 1;
-    
-    render.drawText(hh, fontMid, COL_FG, x, y);
-    render.drawText(mm, fontMid, COL_FG, x + Math.trunc(CELL_W * 1.3), y);
+function overlaps(a, b) {
+    return a.row === b.row && a.col < b.col + b.text.length && b.col < a.col + a.text.length;
 }
 
-function drawDateInGrid(now) {
+function getGridPlacements(now) {
     const seed = now.getHours() * 60 + now.getMinutes();
-    const pos = randomGridPos(seed, 0xABCDEF00, Math.max(1, GRID_ROWS - 2), Math.max(1, GRID_COLS - 5));
-    
-    const dStr = `${DAYS[now.getDay()]} ${MONTHS[now.getMonth()]} ${String(now.getDate()).padStart(2, "0")}`;
-    const x = GRID_LEFT + pos.col * CELL_W + 2;
-    const y = GRID_TOP + pos.row * CELL_H + 2;
-    
-    render.drawText(dStr, fontTag, COL_FG, x, y);
+    const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const date = `${DAYS[now.getDay()]}${MONTHS[now.getMonth()]}${String(now.getDate()).padStart(2, "0")}`;
+
+    const datePos = randomGridPos(seed, 0xABCDEF00, GRID_ROWS, GRID_COLS - date.length + 1);
+    const datePlacement = { text: date, row: datePos.row, col: datePos.col, type: "date" };
+
+    let timePlacement;
+    for (let attempt = 0; attempt < 8; attempt++) {
+        const timePos = randomGridPos(seed, 0x12345678 + attempt * 997, GRID_ROWS, GRID_COLS - time.length + 1);
+        timePlacement = { text: time, row: timePos.row, col: timePos.col, type: "time" };
+        if (!overlaps(timePlacement, datePlacement)) break;
+    }
+
+    return [datePlacement, timePlacement];
+}
+
+function drawGridPlacement(p) {
+    const font = (p.type === "time") ? fontMid : fontDate;
+
+    for (let i = 0; i < p.text.length; i++) {
+        const ch = p.text[i];
+        const col = p.col + i;
+        const cx = GRID_LEFT + col * CELL_W + Math.trunc(CELL_W / 2);
+        const cy = GRID_TOP + p.row * CELL_H + Math.trunc(CELL_H / 2);
+        const tw = render.getTextWidth(ch, font);
+        const th = font.height;
+        render.drawText(ch, font, COL_FG, Math.trunc(cx - tw / 2), Math.trunc(cy - th / 2));
+    }
 }
 
 // ---------- Status and badge -------------------------------------------------
@@ -193,9 +213,9 @@ function draw(event) {
 
     drawLumonLogo(Math.trunc(W / 2), 2);
     drawDividers();
-    drawMDRGrid(now);
-    drawTimeInGrid(now);
-    drawDateInGrid(now);
+    const placements = getGridPlacements(now);
+    drawMDRGrid(now, placements);
+    for (const p of placements) drawGridPlacement(p);
     drawStatusRow(now, H - 28);
     drawDeptBadge(H - 14);
 
