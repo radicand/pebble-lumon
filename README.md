@@ -14,11 +14,11 @@ A fully-featured Pebble Time watchface styled after **Lumon Industries** from th
 #### Real-Time (Live on Device)
 - **Time** — Current hour and minute, replaces grid cells at a randomized position each minute
 - **Date** — Current day/month/year, replaces grid cells at a randomized position (guaranteed different row from time)
-- **Step Count** — Unavailable (Alloy SDK does not expose Pebble Health API)
-- **Battery Percentage** — Real-time battery level via Alloy `embedded:sensor/Battery`
+- **Step Count** — Real-time daily step total via Pebble C `HealthService`
+- **Battery Percentage** — Real-time battery level via Pebble C `BatteryStateService`
 
 #### Status Row (Top)
-- **Left:** `STEPS` — Displays `--` (not currently available in Alloy SDK)
+- **Left:** `STEPS` — Displays the current daily step count, or `--` if health data is unavailable or not permitted
 - **Right:** Rotating **MDR file codename** (one of 20 from the show), or `PRAISE KIER` at the top of each hour
 
 #### Badge Row (Bottom)
@@ -56,16 +56,17 @@ pebble screenshot --emulator emery
 
 ### Data Sources
 
-**Battery** — Uses Alloy's documented `embedded:sensor/Battery` API for real-time device power state.
+**Battery** — Uses Pebble C `battery_state_service_peek()` and `battery_state_service_subscribe()` for real-time device power state. The displayed value is `BatteryChargeState.charge_percent`.
 
-**Steps** — Not currently available; the Alloy/Moddable SDK does not expose the Pebble Health API (`health_service_sum_today`) to watchface JavaScript code.
+**Steps** — Uses Pebble C `HealthService`. The watchface checks `health_service_metric_accessible(HealthMetricStepCount, time_start_of_today(), time(NULL))` before reading `health_service_sum_today(HealthMetricStepCount)`. Health events are subscribed so the display can refresh when movement data changes.
 
 ### Architecture
 
-- **Logo** — Bitmap rasterized from `lumon.industries` font, encoded as compact Poco rectangles (87 rectangles, ~40 bytes)
+- **Native Pebble C SDK** — The watchface is now a `native` Pebble project; the previous Alloy/Moddable runtime dependency has been removed.
+- **Logo** — Bitmap rasterized from `lumon.industries` font, encoded as compact Pebble C rectangles
 - **Grid** — Deterministic pseudo-random digits seeded by cell position + time
 - **Date/Time Overlay** — Pseudo-random deterministic placement per minute; occupies grid cells instead of overlaying them; uses separate salts to ensure date and time never occupy the same row
-- **Rendering** — Optimized to minimize frame updates; grid cells are skipped where date/time text appears
+- **Rendering** — A custom layer redraws on minute ticks, health events, and battery changes; grid cells are skipped where date/time text appears
 
 ## Inspiration
 

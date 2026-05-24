@@ -1,7 +1,7 @@
 {
   "name": "lumontime",
   "author": "Nick Pappas",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "keywords": [
     "pebble-app"
   ],
@@ -10,16 +10,14 @@
   "pebble": {
     "displayName": "LumonTime",
     "uuid": "d4f1bc4c-e298-4f23-9428-2114f4f53b1d",
-    "projectType": "moddable",
+    "projectType": "native",
     "sdkVersion": "3",
-    "enableMultiJS": true,
     "targetPlatforms": [
       "emery"
     ],
     "watchapp": {
       "watchface": true
     },
-    "messageKeys": [],
     "resources": {
       "media": []
     }
