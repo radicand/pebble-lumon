@@ -1,8 +1,10 @@
 {
   "name": "lumontime",
   "author": "Nick Pappas",
-  "version": "1.0.1",
-  "keywords": ["pebble-app"],
+  "version": "1.0.2",
+  "keywords": [
+    "pebble-app"
+  ],
   "private": true,
   "dependencies": {},
   "pebble": {
