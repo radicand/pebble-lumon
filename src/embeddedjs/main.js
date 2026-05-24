@@ -81,9 +81,8 @@ const LOGO_RECTS = [
 ];
 
 function drawLumonLogo(cx, y) {
-    const x = (cx - LOGO_W / 2) | 0;
-    for (let i = 0; i < LOGO_RECTS.length; i++) {
-        const s = LOGO_RECTS[i];
+    const x = Math.trunc(cx - LOGO_W / 2);
+    for (const s of LOGO_RECTS) {
         render.fillRectangle(COL_FG, x + s[0], y + s[1], s[2], s[3]);
     }
 }
@@ -96,9 +95,9 @@ const GRID_TOP    = 44;
 const GRID_BOTTOM = H - 34;
 const CELL_W      = 22;
 const CELL_H      = 22;
-const GRID_COLS   = (W / CELL_W) | 0;
-const GRID_ROWS   = ((GRID_BOTTOM - GRID_TOP) / CELL_H) | 0;
-const GRID_LEFT   = ((W - GRID_COLS * CELL_W) / 2) | 0;
+const GRID_COLS   = Math.trunc(W / CELL_W);
+const GRID_ROWS   = Math.trunc((GRID_BOTTOM - GRID_TOP) / CELL_H);
+const GRID_LEFT   = Math.trunc((W - GRID_COLS * CELL_W) / 2);
 
 function cellDigit(col, row, seed) {
     let h = ((col * 73856093) ^ (row * 19349663) ^ (seed * 83492791)) >>> 0;
@@ -113,11 +112,11 @@ function drawMDRGrid(now) {
     for (let row = 0; row < GRID_ROWS; row++) {
         for (let col = 0; col < GRID_COLS; col++) {
             const d = String(cellDigit(col, row, seed));
-            const cx = GRID_LEFT + col * CELL_W + ((CELL_W / 2) | 0);
-            const cy = GRID_TOP + row * CELL_H + ((CELL_H / 2) | 0);
+            const cx = GRID_LEFT + col * CELL_W + Math.trunc(CELL_W / 2);
+            const cy = GRID_TOP + row * CELL_H + Math.trunc(CELL_H / 2);
             const tw = render.getTextWidth(d, fontSmall);
             const th = fontSmall.height;
-            render.drawText(d, fontSmall, COL_FG_DIMR, (cx - (tw / 2)) | 0, (cy - (th / 2)) | 0);
+            render.drawText(d, fontSmall, COL_FG_DIMR, Math.trunc(cx - tw / 2), Math.trunc(cy - th / 2));
         }
     }
 }
@@ -125,7 +124,7 @@ function drawMDRGrid(now) {
 function randomGridPos(seed, offsetSalt, maxRow, maxCol) {
     const h = ((seed ^ offsetSalt) * 2654435761) >>> 0;
     const row = h % Math.max(1, maxRow);
-    const col = ((h / maxRow) | 0) % Math.max(1, maxCol);
+    const col = Math.trunc(h / maxRow) % Math.max(1, maxCol);
     return { row, col };
 }
 
@@ -140,7 +139,7 @@ function drawTimeInGrid(now) {
     const y = GRID_TOP + pos.row * CELL_H + 1;
     
     render.drawText(hh, fontMid, COL_FG, x, y);
-    render.drawText(mm, fontMid, COL_FG, x + ((CELL_W * 1.3) | 0), y);
+    render.drawText(mm, fontMid, COL_FG, x + Math.trunc(CELL_W * 1.3), y);
 }
 
 function drawDateInGrid(now) {
@@ -176,7 +175,7 @@ function drawStatusRow(now, y) {
 function drawDeptBadge(y) {
     const badge = "DEPT MDR";
     const bw = render.getTextWidth(badge, fontTag);
-    render.drawText(badge, fontTag, COL_FG_DIMR, ((W - bw) / 2) | 0, y);
+    render.drawText(badge, fontTag, COL_FG_DIMR, Math.trunc((W - bw) / 2), y);
 }
 
 function drawDividers() {
@@ -186,13 +185,13 @@ function drawDividers() {
 
 // ---------- Draw main screen ------------------------------------------------
 function draw(event) {
-    const now = (event && event.date) ? event.date : new Date();
+    const now = event?.date ? event.date : new Date();
 
     render.begin();
     render.fillRectangle(COL_BG, 0, 0, W, H);
     drawScanlines();
 
-    drawLumonLogo((W / 2) | 0, 2);
+    drawLumonLogo(Math.trunc(W / 2), 2);
     drawDividers();
     drawMDRGrid(now);
     drawTimeInGrid(now);
