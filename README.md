@@ -1,6 +1,6 @@
 # LumonTime — A Severance-Inspired Pebble Watchface
 
-A fully-featured Pebble Time watchface styled after **Lumon Industries** from the HBO series *Severance*, featuring the iconic terminal aesthetic with real-time data and an immersive grid-based display.
+A fully-featured Pebble Time watchface styled after **Lumon Industries** from the TV series *Severance*, featuring the iconic terminal aesthetic with real-time data and an immersive grid-based display.
 
 ## Features
 
