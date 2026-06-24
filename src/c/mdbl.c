@@ -91,7 +91,7 @@ static bool s_boot_demo_done;
 
 static const char *DAYS[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
 static const char *MONTHS[] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
-static const char *MDR_FILES[] = {"TUMWATER", "CAIRNS", "SIENA", "ALLENTOWN", "WELLINGTON", "PACIFICA", "BELLEFONTE", "NANTUCKET", "KIER"};
+static const char *MDR_FILES[] = {"TUMWATER", "CAIRNS", "SIENA", "ALLENTOWN", "WELLINGTON", "PACIFICA", "BELLEFONTE", "NANTUCKET", "COLDHARBOR", "KIER"};
 
 static const int16_t LOGO_W = 164;
 static const LogoRect LOGO_RECTS[] = {
