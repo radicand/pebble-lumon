@@ -37,6 +37,15 @@ You can choose how often this plays:
 
 A short demo runs once when the watchface first loads (unless animation is Off). Change the setting from the watchface's settings page in the Pebble phone app.
 
+## Screenshots
+
+| | |
+| --- | --- |
+| ![Main watchface](screenshots/01-watchface.png) | The MDR grid with live time, date, and receiving bins |
+| ![KIER at the top of the hour](screenshots/02-kier-hour.png) | Top of the hour — the file bin shows **KIER** with a full bar |
+| ![MDR file rotation](screenshots/03-file-location.png) | Time and date on separate grid rows; file name and battery in the bins |
+| ![Collection animation](screenshots/04-collection.png) | Digits collect into a bin when the time changes |
+
 ## Building & Installing
 
 For developers with the [Pebble SDK](https://developer.rebble.io/) installed. Targets **Pebble Time 2**.
