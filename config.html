@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>LumonTime Settings</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        font-family: -apple-system, sans-serif;
+        margin: 24px;
+        color: #0d1d2f;
+      }
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
+      select,
+      button {
+        font-size: 16px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      select {
+        margin-bottom: 16px;
+        padding: 8px;
+      }
+      button {
+        padding: 10px;
+      }
+      p {
+        color: #4a667a;
+        line-height: 1.4;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>LumonTime</h2>
+    <p>Collection animation runs automatically when time or date changes. Watchface buttons are reserved by Pebble.</p>
+    <label for="anim-mode">Collection animation</label>
+    <select id="anim-mode">
+      <option value="1">Hourly (default)</option>
+      <option value="0">Off</option>
+      <option value="2">Every minute</option>
+    </select>
+    <button id="save">Save</button>
+    <script>
+      var SETTINGS_KEY = 'lumontime-settings';
+
+      function load() {
+        var settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+        if (settings.ANIM_MODE !== undefined) {
+          document.getElementById('anim-mode').value = String(settings.ANIM_MODE);
+        }
+      }
+
+      document.getElementById('save').onclick = function() {
+        var mode = parseInt(document.getElementById('anim-mode').value, 10);
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ANIM_MODE: mode }));
+        var message = { ANIM_MODE: mode };
+        if (typeof Pebble !== 'undefined') {
+          Pebble.sendAppMessage(
+            message,
+            function() {
+              Pebble.showToast('Saved', 'short');
+              Pebble.close();
+            },
+            function(err) {
+              console.log('sendAppMessage failed', err);
+            }
+          );
+        }
+      };
+
+      load();
+    </script>
+  </body>
+</html>

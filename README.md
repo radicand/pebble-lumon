@@ -2,6 +2,8 @@
 
 A fully-featured Pebble Time watchface styled after **Lumon Industries** from the TV series *Severance*, featuring the iconic terminal aesthetic with real-time data and an immersive grid-based display.
 
+**[Download on the Pebble App Store](https://apps.repebble.com/87e9be27ecf34f248efa8235)**
+
 ## Features
 
 ### Visual Design

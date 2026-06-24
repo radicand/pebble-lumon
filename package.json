@@ -6,18 +6,30 @@
     "pebble-app"
   ],
   "private": true,
-  "dependencies": {},
+  "scripts": {
+    "lint:ast": "ast-grep scan src config.html",
+    "test:ast": "ast-grep test",
+    "outline": "ast-grep outline --outline-rules outline-rules/c.yml --outline-rules outline-rules/javascript.yml --items structure",
+    "outline:json": "ast-grep outline --outline-rules outline-rules/c.yml --outline-rules outline-rules/javascript.yml --items structure --json=stream"
+  },
   "pebble": {
     "displayName": "LumonTime",
     "uuid": "d4f1bc4c-e298-4f23-9428-2114f4f53b1d",
     "projectType": "native",
     "sdkVersion": "3",
+    "enableMultiJS": true,
     "targetPlatforms": [
       "emery"
     ],
     "watchapp": {
       "watchface": true
     },
+    "capabilities": [
+      "configurable"
+    ],
+    "messageKeys": [
+      "ANIM_MODE"
+    ],
     "resources": {
       "media": [
         {
@@ -28,5 +40,11 @@
         }
       ]
     }
+  },
+  "devDependencies": {
+    "@ast-grep/cli": "^0.44.0"
+  },
+  "allowScripts": {
+    "@ast-grep/cli@0.44.0": true
   }
 }

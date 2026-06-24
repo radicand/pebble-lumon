@@ -4,6 +4,7 @@
 # Feel free to customize this to your needs.
 #
 import os.path
+import zipfile
 
 top = '.'
 out = 'build'
@@ -47,4 +48,17 @@ def build(ctx):
     ctx.env = cached_env
 
     ctx.set_group('bundle')
-    ctx.pbl_bundle(binaries=binaries)
+    ctx.pbl_bundle(binaries=binaries,
+                   js=ctx.path.ant_glob(['src/pkjs/**/*.js',
+                                         'src/pkjs/**/*.json']),
+                   js_entry_file='src/pkjs/index.js')
+
+    def package_config(bld):
+        pbw_path = os.path.join(bld.bldnode.abspath(), 'lumontime.pbw')
+        config_path = os.path.join(bld.path.abspath(), 'config.html')
+        if os.path.exists(pbw_path) and os.path.exists(config_path):
+            with zipfile.ZipFile(pbw_path, 'a') as pbw:
+                if 'config.html' not in pbw.namelist():
+                    pbw.write(config_path, 'config.html')
+
+    ctx.add_post_fun(package_config)

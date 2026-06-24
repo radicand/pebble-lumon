@@ -3,3 +3,4 @@ build/
 .snapshots/
 node_modules/
 .DS_Store
+resources/.DS_Store
