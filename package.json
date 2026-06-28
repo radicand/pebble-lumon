@@ -7,7 +7,7 @@
   ],
   "private": true,
   "scripts": {
-    "lint:ast": "ast-grep scan src config.html",
+    "lint:ast": "ast-grep scan src",
     "test:ast": "ast-grep test",
     "outline": "ast-grep outline --outline-rules outline-rules/c.yml --outline-rules outline-rules/javascript.yml --items structure",
     "outline:json": "ast-grep outline --outline-rules outline-rules/c.yml --outline-rules outline-rules/javascript.yml --items structure --json=stream"
@@ -40,6 +40,9 @@
         }
       ]
     }
+  },
+  "dependencies": {
+    "@rebble/clay": "^1.0.10"
   },
   "devDependencies": {
     "@ast-grep/cli": "^0.44.0"

@@ -4,10 +4,11 @@ extern uint32_t MESSAGE_KEY_ANIM_MODE;
 
 #define PERSIST_KEY_ANIM_MODE 1
 #define BINS_H 38
-#define GRID_TOP 40
-#define CELL_W 18
-#define CELL_H 18
-#define BIN_COUNT 3
+#define FILE_DIVIDER_Y 38
+#define GRID_TOP 44
+#define CELL_W 20
+#define CELL_H 20
+#define BIN_COUNT 2
 #define ANIM_FRAMES 16
 #define ANIM_MS 60
 #define STEPS_GOAL 10000
@@ -74,7 +75,8 @@ static GFont s_font_small;
 static GFont s_font_time;
 static GFont s_font_date;
 static GFont s_font_bin;
-static GFont s_font_bin_label;
+static GFont s_font_bin_value;
+static GFont s_font_file;
 static int32_t s_steps = -1;
 static uint8_t s_battery_percent;
 static AnimMode s_anim_mode = ANIM_HOURLY;
@@ -91,7 +93,12 @@ static bool s_boot_demo_done;
 
 static const char *DAYS[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
 static const char *MONTHS[] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
-static const char *MDR_FILES[] = {"TUMWATER", "CAIRNS", "SIENA", "ALLENTOWN", "WELLINGTON", "PACIFICA", "BELLEFONTE", "NANTUCKET", "COLDHARBOR", "KIER"};
+static const char *MDR_FILES[] = {
+  "ALLENTOWN", "TRINITY", "TODOS SANTOS", "ASTORIA", "LUCKNOW", "ST. PIERRE", "COLEMAN",
+  "WAYNESBORO", "CORK", "MOLDE", "CAIRNS", "BODO", "ZURICH", "CULPEPPER", "BELLINGHAM",
+  "BILLINGS", "YAKIMA", "LOVELAND", "MERIDA", "SOPCHOPPY", "VILNIUS", "RHODES",
+  "WELLINGTON", "DRANESVILLE", "COLD HARBOR"
+};
 
 static const int16_t LOGO_W = 164;
 static const LogoRect LOGO_RECTS[] = {
@@ -271,9 +278,56 @@ static void draw_lumon_logo(GContext *ctx, int16_t cx, int16_t y) {
   }
 }
 
+static uint32_t mdr_hour_slot(const struct tm *tick_time) {
+  return (((uint32_t)tick_time->tm_year + 1900u) * 366u + (uint32_t)tick_time->tm_yday) * 24u + (uint32_t)tick_time->tm_hour;
+}
+
+static int mdr_file_index_for_slot(uint32_t slot) {
+  const uint32_t h = slot * 2654435761u ^ 0x4D445246u;
+  return (int)(h % ARRAY_LENGTH(MDR_FILES));
+}
+
+static int mdr_file_index_for_hour(const struct tm *tick_time) {
+  const uint32_t slot = mdr_hour_slot(tick_time);
+  int idx = mdr_file_index_for_slot(slot);
+  if (idx == mdr_file_index_for_slot(slot - 1)) {
+    idx = (idx + 1) % ARRAY_LENGTH(MDR_FILES);
+  }
+  return idx;
+}
+
+static const char *mdr_file_for_time(const struct tm *tick_time) {
+  if (tick_time->tm_min == 0) {
+    return "PRAISE KIER";
+  }
+  return MDR_FILES[mdr_file_index_for_hour(tick_time)];
+}
+
+static void draw_top_divider_with_file(GContext *ctx, int16_t width, const struct tm *tick_time) {
+  const char *file_name = mdr_file_for_time(tick_time);
+  const bool file_highlight = tick_time->tm_min == 0;
+  const GRect text_rect = GRect(8, FILE_DIVIDER_Y - 9, width - 16, 18);
+  const GSize text_size = graphics_text_layout_get_content_size(
+    file_name, s_font_file, text_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter);
+  const int16_t divider_y = text_rect.origin.y + text_size.h / 2 + 2;
+  const int16_t text_left = 8 + (width - 16 - text_size.w) / 2;
+  const int16_t gap_start = text_left - 4;
+  const int16_t gap_end = text_left + text_size.w + 4;
+
+  graphics_context_set_fill_color(ctx, col_dim());
+  if (gap_start > 8) {
+    graphics_fill_rect(ctx, GRect(8, divider_y, gap_start - 8, 1), 0, GCornerNone);
+  }
+  if (gap_end < width - 8) {
+    graphics_fill_rect(ctx, GRect(gap_end, divider_y, width - 8 - gap_end, 1), 0, GCornerNone);
+  }
+
+  graphics_context_set_text_color(ctx, file_highlight ? col_fg() : col_dim());
+  graphics_draw_text(ctx, file_name, s_font_file, text_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+}
+
 static void draw_dividers(GContext *ctx, int16_t width, const GridGeometry *geom) {
   graphics_context_set_fill_color(ctx, col_dim());
-  graphics_fill_rect(ctx, GRect(8, 40, width - 16, 1), 0, GCornerNone);
   graphics_fill_rect(ctx, GRect(8, geom->grid_bottom, width - 16, 1), 0, GCornerNone);
 }
 
@@ -312,20 +366,14 @@ static void bin_center(int16_t width, int16_t bins_top, int16_t index, int16_t *
   *cy = bins_top + BINS_H / 2;
 }
 
-static const char *mdr_file_for_time(const struct tm *tick_time) {
-  if (tick_time->tm_min == 0) {
-    return "KIER";
-  }
-  return MDR_FILES[(tick_time->tm_hour * 60 + tick_time->tm_min) % ARRAY_LENGTH(MDR_FILES)];
-}
-
-static void draw_bins(GContext *ctx, const struct tm *tick_time, int16_t width, const GridGeometry *geom) {
+static void draw_bins(GContext *ctx, int16_t width, const GridGeometry *geom) {
   const int16_t bin_w = bin_rect_w(width);
   const int16_t bin_h = geom->bins_h - 4;
   const int16_t y = geom->bins_top + 2;
   const int16_t bar_h = 5;
   const int16_t bar_y = y + bin_h - bar_h - 3;
   const int16_t label_h = 14;
+  const int16_t value_h = bar_y - y - 4;
 
   char steps_value[12];
   fmt_steps(steps_value, sizeof(steps_value), s_steps);
@@ -335,36 +383,25 @@ static void draw_bins(GContext *ctx, const struct tm *tick_time, int16_t width, 
     steps_pct = clamp_pct((int)(s_steps * 100 / STEPS_GOAL));
   }
   const int bat_pct = clamp_pct(s_battery_percent);
-  const int file_pct = tick_time->tm_min == 0 ? 100 : clamp_pct(tick_time->tm_min * 100 / 59);
-  const char *file_name = mdr_file_for_time(tick_time);
-  const bool file_highlight = tick_time->tm_min == 0;
-  char file_label[12];
-  snprintf(file_label, sizeof(file_label), "%.8s", file_name);
 
-  const int pcts[BIN_COUNT] = {steps_pct, bat_pct, file_pct};
-  const char *labels[BIN_COUNT] = {"ST", "BT", NULL};
+  const int pcts[BIN_COUNT] = {steps_pct, bat_pct};
+  const char *labels[BIN_COUNT] = {"STP", "BAT"};
   char bat_value[8];
   snprintf(bat_value, sizeof(bat_value), "%d%%", s_battery_percent);
-  const char *values[BIN_COUNT] = {steps_value, bat_value, file_label};
+  const char *values[BIN_COUNT] = {steps_value, bat_value};
 
   for (int i = 0; i < BIN_COUNT; i++) {
     const int16_t x = bin_rect_x(width, i);
     const int pct = pcts[i];
     const int16_t pulse = (s_anim.active && s_anim.target_bin == i && s_anim.frame >= s_anim.total_frames - 2) ? 3 : 0;
-    const GColor value_color = (i == 2 && file_highlight) ? col_fg() : col_dim();
 
     graphics_context_set_stroke_color(ctx, col_dim());
     graphics_draw_rect(ctx, GRect(x, y, bin_w, bin_h));
 
-    if (i == 2) {
-      graphics_context_set_text_color(ctx, value_color);
-      graphics_draw_text(ctx, values[i], s_font_bin_label, GRect(x + 2, y + 1, bin_w - 4, label_h), GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
-    } else {
-      graphics_context_set_text_color(ctx, col_dim());
-      graphics_draw_text(ctx, labels[i], s_font_bin, GRect(x + 2, y + 1, 16, label_h), GTextOverflowModeFill, GTextAlignmentLeft, NULL);
-      graphics_context_set_text_color(ctx, value_color);
-      graphics_draw_text(ctx, values[i], s_font_bin, GRect(x + 18, y + 1, bin_w - 20, label_h), GTextOverflowModeFill, GTextAlignmentRight, NULL);
-    }
+    graphics_context_set_text_color(ctx, col_dim());
+    graphics_draw_text(ctx, labels[i], s_font_bin, GRect(x + 2, y + 1, 24, label_h), GTextOverflowModeFill, GTextAlignmentLeft, NULL);
+    graphics_context_set_text_color(ctx, col_dim());
+    graphics_draw_text(ctx, values[i], s_font_bin_value, GRect(x + 2, y + 1, bin_w - 4, value_h), GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
 
     const int16_t bar_inner_w = bin_w - 6;
     graphics_context_set_fill_color(ctx, col_dim());
@@ -414,7 +451,7 @@ static void draw_collection_animation(GContext *ctx, int16_t width, const GridGe
     sum_y += y;
 
     char ch[2] = {s_anim.chars[i], '\0'};
-    draw_centered_cell_text(ctx, ch, s_font_time, col_fg(), x - s_anim.cell_w / 2, y - s_anim.cell_h / 2, s_anim.cell_w, s_anim.cell_h, -2);
+    draw_centered_cell_text(ctx, ch, s_font_time, col_fg(), x - s_anim.cell_w / 2, y - s_anim.cell_h / 2, s_anim.cell_w, s_anim.cell_h, 0);
   }
 
   const int16_t centroid_x = (int16_t)(sum_x / s_anim.cell_count);
@@ -457,7 +494,7 @@ static void finish_animation(void) {
     s_hide_date_overlay = false;
     GridGeometry geom;
     compute_grid_geometry(s_screen_w, s_screen_h, &geom);
-    start_collection_from_layout(&s_pending_date_layout, ANIM_TYPE_DATE, 2, &geom);
+    start_collection_from_layout(&s_pending_date_layout, ANIM_TYPE_DATE, 1, &geom);
     return;
   }
 
@@ -558,7 +595,7 @@ static void handle_time_transitions(struct tm *tick_time) {
       s_hide_date_overlay = true;
     }
   } else if (date_changed && should_animate_date_change(&s_prev_time, tick_time)) {
-    start_collection_from_layout(&old_layout, ANIM_TYPE_DATE, 2, &geom);
+    start_collection_from_layout(&old_layout, ANIM_TYPE_DATE, 1, &geom);
   }
 
   s_prev_time = *tick_time;
@@ -580,17 +617,18 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
 
   draw_lumon_logo(ctx, width / 2, 2);
-  draw_dividers(ctx, width, &geom);
+  draw_top_divider_with_file(ctx, width, tick_time);
   draw_mdr_grid(ctx, &layout, tick_time, &geom);
-  draw_bins(ctx, tick_time, width, &geom);
+  draw_bins(ctx, width, &geom);
+  draw_dividers(ctx, width, &geom);
 
   const bool hide_time = s_anim.active && s_anim.type == ANIM_TYPE_TIME;
   const bool hide_date = s_hide_date_overlay || (s_anim.active && s_anim.type == ANIM_TYPE_DATE);
   if (!hide_time) {
-    draw_grid_text(ctx, layout.time, layout.time_row, layout.time_col, s_font_time, col_fg(), &geom, -2);
+    draw_grid_text(ctx, layout.time, layout.time_row, layout.time_col, s_font_time, col_fg(), &geom, 0);
   }
   if (!hide_date) {
-    draw_grid_text(ctx, layout.date, layout.date_row, layout.date_col, s_font_date, col_fg(), &geom, -2);
+    draw_grid_text(ctx, layout.date, layout.date_row, layout.date_col, s_font_date, col_fg(), &geom, 0);
   }
 
   draw_collection_animation(ctx, width, &geom);
@@ -694,11 +732,12 @@ static void window_unload(Window *window) {
 }
 
 static void init(void) {
-  s_font_small = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
-  s_font_time = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
-  s_font_date = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
+  s_font_small = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
+  s_font_time = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
+  s_font_date = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
   s_font_bin = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
-  s_font_bin_label = fonts_get_system_font(FONT_KEY_GOTHIC_14);
+  s_font_bin_value = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
+  s_font_file = fonts_get_system_font(FONT_KEY_GOTHIC_18);
 
   load_settings();
   update_battery();

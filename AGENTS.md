@@ -1,14 +1,14 @@
 # Agent guide — LumonTime
 
-Pebble Time 2 (emery) watchface. Native Pebble C SDK with companion JS and HTML config.
+Pebble Time 2 (emery) watchface. Native Pebble C SDK with companion JS and Clay config.
 
 ## Source layout
 
 | Path | Purpose |
 | --- | --- |
 | `src/c/mdbl.c` | Watchface logic, rendering, animation, health/battery |
-| `src/pkjs/index.js` | Phone-side companion: settings sync, config page launch |
-| `config.html` | In-app configuration UI |
+| `src/pkjs/config.json` | Clay settings page definition |
+| `src/pkjs/index.js` | Phone-side companion: Clay config, settings sync |
 | `outline-rules/` | ast-grep outline extractors for C and JavaScript |
 
 Build with `pebble build`. Install with `pebble install --emulator emery`.
@@ -61,7 +61,7 @@ Outline is local and syntax-based. It does not resolve types, follow references,
 ## Linting with ast-grep
 
 ```bash
-npm run lint:ast    # scan src/ and config.html against rules in rules/
+npm run lint:ast    # scan src/ against rules in rules/
 npm run test:ast    # run rule snapshot tests in rule-tests/
 ```
 
@@ -70,5 +70,5 @@ Add new scan rules under `rules/`. Project config is in `sgconfig.yml`.
 ## Conventions
 
 - Pebble C watchface code lives in a single translation unit (`src/c/mdbl.c`).
-- Settings flow: `config.html` → `localStorage` → `src/pkjs/index.js` → AppMessage `ANIM_MODE` → C persist key.
+- Settings flow: Clay `config.json` → `webviewclosed` → `localStorage` → AppMessage `ANIM_MODE` → C persist key.
 - Prefer minimal diffs. Match existing naming and layout patterns in `mdbl.c`.
