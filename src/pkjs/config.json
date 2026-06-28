@@ -18,19 +18,19 @@
         "type": "radiogroup",
         "messageKey": "ANIM_MODE",
         "label": "Frequency",
-        "defaultValue": 1,
+        "defaultValue": "1",
         "options": [
           {
             "label": "Hourly (default)",
-            "value": 1
+            "value": "1"
           },
           {
             "label": "Off",
-            "value": 0
+            "value": "0"
           },
           {
             "label": "Every minute",
-            "value": 2
+            "value": "2"
           }
         ]
       }

@@ -9,7 +9,10 @@ extern uint32_t MESSAGE_KEY_ANIM_MODE;
 #define CELL_W 20
 #define CELL_H 20
 #define BIN_COUNT 2
-#define ANIM_FRAMES 16
+#define ANIM_OPEN_FRAMES 6
+#define ANIM_COLLECT_FRAMES 18
+#define ANIM_CLOSE_FRAMES 6
+#define ANIM_TOTAL_FRAMES (ANIM_OPEN_FRAMES + ANIM_COLLECT_FRAMES + ANIM_CLOSE_FRAMES)
 #define ANIM_MS 60
 #define STEPS_GOAL 10000
 
@@ -52,6 +55,13 @@ typedef enum {
   ANIM_TYPE_TIME = 1,
   ANIM_TYPE_DATE = 2
 } AnimType;
+
+typedef struct {
+  int16_t x;
+  int16_t y;
+  int16_t w;
+  int16_t h;
+} BinGeom;
 
 typedef struct {
   bool active;
@@ -360,21 +370,84 @@ static int16_t bin_rect_w(int16_t width) {
   return (width - 2 * margin - (BIN_COUNT - 1) * gap) / BIN_COUNT;
 }
 
-static void bin_center(int16_t width, int16_t bins_top, int16_t index, int16_t *cx, int16_t *cy) {
+static void compute_bin_geom(int16_t x, int16_t y, int16_t bin_w, int16_t bin_h, BinGeom *geom) {
+  geom->x = x;
+  geom->y = y;
+  geom->w = bin_w;
+  geom->h = bin_h;
+}
+
+static void bin_geom_for_index(int16_t width, const GridGeometry *grid_geom, uint8_t index, BinGeom *bin_geom) {
+  const int16_t x = bin_rect_x(width, index);
+  const int16_t y = grid_geom->bins_top + 2;
   const int16_t bin_w = bin_rect_w(width);
-  *cx = bin_rect_x(width, index) + bin_w / 2;
-  *cy = bins_top + BINS_H / 2;
+  const int16_t bin_h = grid_geom->bins_h - 4;
+  compute_bin_geom(x, y, bin_w, bin_h, bin_geom);
+}
+
+static void bin_mouth_center(const BinGeom *geom, int16_t *cx, int16_t *cy) {
+  *cx = geom->x + geom->w / 2;
+  *cy = geom->y + 2;
+}
+
+static void draw_doubled_hline(GContext *ctx, int16_t x1, int16_t y, int16_t x2) {
+  graphics_draw_line(ctx, GPoint(x1, y), GPoint(x2, y));
+  graphics_draw_line(ctx, GPoint(x1, y + 2), GPoint(x2, y + 2));
+}
+
+static void draw_bin_funnel(GContext *ctx, const BinGeom *geom, int16_t open_amount) {
+  if (open_amount <= 0) {
+    return;
+  }
+
+  const int16_t top_y = geom->y;
+  const int16_t left_x = geom->x;
+  const int16_t right_x = geom->x + geom->w;
+  const int16_t open_h = (open_amount * 36) / 256;
+  const int16_t diag_spread = (open_amount * 12) / 256;
+  const int16_t lid_len = (open_amount * (geom->w / 2)) / 256;
+
+  const int16_t left_diag_x = left_x - diag_spread;
+  const int16_t left_diag_y = top_y - open_h;
+  const int16_t right_diag_x = right_x + diag_spread;
+  const int16_t right_diag_y = top_y - open_h;
+
+  graphics_context_set_stroke_color(ctx, col_fg());
+  graphics_draw_line(ctx, GPoint(left_x, top_y), GPoint(left_diag_x, left_diag_y));
+  graphics_draw_line(ctx, GPoint(right_x, top_y), GPoint(right_diag_x, right_diag_y));
+  draw_doubled_hline(ctx, left_diag_x, left_diag_y, left_diag_x + lid_len);
+  draw_doubled_hline(ctx, right_diag_x - lid_len, right_diag_y, right_diag_x);
+}
+
+static void draw_single_bin(GContext *ctx, const BinGeom *geom, const char *label, const char *value, int pct, bool highlight, int16_t pulse) {
+  const int16_t bar_h = 5;
+  const int16_t bar_y = geom->y + geom->h - bar_h - 3;
+  const int16_t label_h = 14;
+  const int16_t bar_inner_w = geom->w - 6;
+  const GColor stroke = highlight ? col_fg() : col_dim();
+
+  graphics_context_set_stroke_color(ctx, stroke);
+  graphics_draw_rect(ctx, GRect(geom->x, geom->y, geom->w, geom->h));
+
+  graphics_context_set_text_color(ctx, col_dim());
+  graphics_draw_text(ctx, label, s_font_bin, GRect(geom->x + 2, geom->y + 1, 24, label_h), GTextOverflowModeFill, GTextAlignmentLeft, NULL);
+  graphics_draw_text(ctx, value, s_font_bin_value, GRect(geom->x + 18, geom->y + 1, geom->w - 20, label_h), GTextOverflowModeFill, GTextAlignmentRight, NULL);
+
+  graphics_context_set_fill_color(ctx, col_dim());
+  graphics_fill_rect(ctx, GRect(geom->x + 3, bar_y, bar_inner_w, bar_h), 0, GCornerNone);
+
+  if (pct >= 0) {
+    const int16_t fill_w = (int16_t)((bar_inner_w * pct) / 100) + pulse;
+    graphics_context_set_fill_color(ctx, col_fg());
+    if (fill_w >= bar_inner_w) {
+      graphics_fill_rect(ctx, GRect(geom->x + 3, bar_y, bar_inner_w, bar_h), 0, GCornerNone);
+    } else if (fill_w > 0) {
+      graphics_fill_rect(ctx, GRect(geom->x + 3, bar_y, fill_w, bar_h), 0, GCornerNone);
+    }
+  }
 }
 
 static void draw_bins(GContext *ctx, int16_t width, const GridGeometry *geom) {
-  const int16_t bin_w = bin_rect_w(width);
-  const int16_t bin_h = geom->bins_h - 4;
-  const int16_t y = geom->bins_top + 2;
-  const int16_t bar_h = 5;
-  const int16_t bar_y = y + bin_h - bar_h - 3;
-  const int16_t label_h = 14;
-  const int16_t value_h = bar_y - y - 4;
-
   char steps_value[12];
   fmt_steps(steps_value, sizeof(steps_value), s_steps);
 
@@ -391,31 +464,11 @@ static void draw_bins(GContext *ctx, int16_t width, const GridGeometry *geom) {
   const char *values[BIN_COUNT] = {steps_value, bat_value};
 
   for (int i = 0; i < BIN_COUNT; i++) {
-    const int16_t x = bin_rect_x(width, i);
-    const int pct = pcts[i];
-    const int16_t pulse = (s_anim.active && s_anim.target_bin == i && s_anim.frame >= s_anim.total_frames - 2) ? 3 : 0;
-
-    graphics_context_set_stroke_color(ctx, col_dim());
-    graphics_draw_rect(ctx, GRect(x, y, bin_w, bin_h));
-
-    graphics_context_set_text_color(ctx, col_dim());
-    graphics_draw_text(ctx, labels[i], s_font_bin, GRect(x + 2, y + 1, 24, label_h), GTextOverflowModeFill, GTextAlignmentLeft, NULL);
-    graphics_context_set_text_color(ctx, col_dim());
-    graphics_draw_text(ctx, values[i], s_font_bin_value, GRect(x + 2, y + 1, bin_w - 4, value_h), GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
-
-    const int16_t bar_inner_w = bin_w - 6;
-    graphics_context_set_fill_color(ctx, col_dim());
-    graphics_fill_rect(ctx, GRect(x + 3, bar_y, bar_inner_w, bar_h), 0, GCornerNone);
-
-    if (pct >= 0) {
-      const int16_t fill_w = (int16_t)((bar_inner_w * pct) / 100) + pulse;
-      graphics_context_set_fill_color(ctx, col_fg());
-      if (fill_w >= bar_inner_w) {
-        graphics_fill_rect(ctx, GRect(x + 3, bar_y, bar_inner_w, bar_h), 0, GCornerNone);
-      } else if (fill_w > 0) {
-        graphics_fill_rect(ctx, GRect(x + 3, bar_y, fill_w, bar_h), 0, GCornerNone);
-      }
-    }
+    BinGeom bin_geom;
+    bin_geom_for_index(width, geom, i, &bin_geom);
+    const bool highlight = s_anim.active && s_anim.target_bin == (uint8_t)i;
+    const int16_t pulse = (highlight && s_anim.frame >= s_anim.total_frames - 2) ? 3 : 0;
+    draw_single_bin(ctx, &bin_geom, labels[i], values[i], pcts[i], highlight, pulse);
   }
 }
 
@@ -427,40 +480,92 @@ static int16_t ease_out(int16_t t, int16_t max_t) {
   return 256 - ((256 - progress) * (256 - progress) / 256);
 }
 
+static int16_t ease_in(int16_t t, int16_t max_t) {
+  if (max_t <= 0) {
+    return 256;
+  }
+  const int16_t progress = t * 256 / max_t;
+  return (progress * progress) / 256;
+}
+
+static int16_t anim_open_amount(void) {
+  if (s_anim.frame < ANIM_OPEN_FRAMES) {
+    return ease_out(s_anim.frame, ANIM_OPEN_FRAMES - 1);
+  }
+  if (s_anim.frame < ANIM_OPEN_FRAMES + ANIM_COLLECT_FRAMES) {
+    return 256;
+  }
+
+  const int16_t close_frame = s_anim.frame - ANIM_OPEN_FRAMES - ANIM_COLLECT_FRAMES;
+  return 256 - ease_out(close_frame, ANIM_CLOSE_FRAMES - 1);
+}
+
+static int16_t anim_collect_progress(void) {
+  if (s_anim.frame < ANIM_OPEN_FRAMES) {
+    return 0;
+  }
+  if (s_anim.frame >= ANIM_OPEN_FRAMES + ANIM_COLLECT_FRAMES) {
+    return 256;
+  }
+
+  return ease_in(s_anim.frame - ANIM_OPEN_FRAMES, ANIM_COLLECT_FRAMES - 1);
+}
+
+static GFont font_for_anim_scale(int16_t scale) {
+  if (scale >= 200) {
+    return s_font_time;
+  }
+  if (scale >= 140) {
+    return s_font_small;
+  }
+  if (scale >= 80) {
+    return s_font_bin_value;
+  }
+  return s_font_bin;
+}
+
+static void draw_anim_digit(GContext *ctx, char ch, int16_t x, int16_t y, int16_t scale) {
+  if (scale < 24) {
+    return;
+  }
+
+  char str[2] = {ch, '\0'};
+  const int16_t size = (s_anim.cell_w * scale) / 256;
+  if (size < 6) {
+    return;
+  }
+
+  const GFont font = font_for_anim_scale(scale);
+  draw_centered_cell_text(ctx, str, font, col_fg(), x - size / 2, y - size / 2, size, size, 0);
+}
+
 static void draw_collection_animation(GContext *ctx, int16_t width, const GridGeometry *geom) {
   if (!s_anim.active || s_anim.cell_count <= 0) {
     return;
   }
 
-  int32_t sum_x = 0;
-  int32_t sum_y = 0;
+  BinGeom target_bin;
+  bin_geom_for_index(width, geom, s_anim.target_bin, &target_bin);
+  const int16_t open_amount = anim_open_amount();
+  draw_bin_funnel(ctx, &target_bin, open_amount);
+
+  const int16_t collect = anim_collect_progress();
+  if (collect <= 0) {
+    return;
+  }
+
   int16_t target_cx;
   int16_t target_cy;
-  bin_center(width, geom->bins_top, s_anim.target_bin, &target_cx, &target_cy);
-
-  const int16_t eased = ease_out(s_anim.frame, s_anim.total_frames - 1);
+  bin_mouth_center(&target_bin, &target_cx, &target_cy);
+  const int16_t scale = 256 - (collect * 224 / 256);
 
   for (int16_t i = 0; i < s_anim.cell_count; i++) {
     const int16_t start_x = s_anim.grid_left + s_anim.cols[i] * s_anim.cell_w + s_anim.cell_w / 2;
     const int16_t start_y = s_anim.grid_top + s_anim.rows[i] * s_anim.cell_h + s_anim.cell_h / 2;
-    const int16_t end_x = target_cx;
-    const int16_t end_y = target_cy;
-    const int16_t x = start_x + ((end_x - start_x) * eased) / 256;
-    const int16_t y = start_y + ((end_y - start_y) * eased) / 256;
-    sum_x += x;
-    sum_y += y;
-
-    char ch[2] = {s_anim.chars[i], '\0'};
-    draw_centered_cell_text(ctx, ch, s_font_time, col_fg(), x - s_anim.cell_w / 2, y - s_anim.cell_h / 2, s_anim.cell_w, s_anim.cell_h, 0);
+    const int16_t x = start_x + ((target_cx - start_x) * collect) / 256;
+    const int16_t y = start_y + ((target_cy - start_y) * collect) / 256;
+    draw_anim_digit(ctx, s_anim.chars[i], x, y, scale);
   }
-
-  const int16_t centroid_x = (int16_t)(sum_x / s_anim.cell_count);
-  const int16_t centroid_y = (int16_t)(sum_y / s_anim.cell_count);
-  const int16_t funnel_top_y = centroid_y - 4;
-
-  graphics_context_set_stroke_color(ctx, col_fg());
-  graphics_draw_line(ctx, GPoint(centroid_x - 8, funnel_top_y), GPoint(target_cx, geom->bins_top));
-  graphics_draw_line(ctx, GPoint(centroid_x + 8, funnel_top_y), GPoint(target_cx, geom->bins_top));
 }
 
 static void start_collection_from_layout(const DateTimeLayout *layout, AnimType type, uint8_t target_bin, const GridGeometry *geom);
@@ -520,7 +625,7 @@ static void start_collection_from_layout(const DateTimeLayout *layout, AnimType 
 
   s_anim.active = true;
   s_anim.frame = 0;
-  s_anim.total_frames = ANIM_FRAMES;
+  s_anim.total_frames = ANIM_TOTAL_FRAMES;
   s_anim.target_bin = target_bin;
   s_anim.type = type;
   s_anim.grid_left = geom->grid_left;
