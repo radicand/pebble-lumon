@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.0](https://github.com/radicand/pebble-lumon/compare/v1.1.1...v1.2.0) (2026-06-28)
+
+
+### Features
+
+* better mdr interface ([f33628c](https://github.com/radicand/pebble-lumon/commit/f33628c9ed3fee13f6bccd6a5312529aa0f6501e))
+* fixed number grid ([a2abdf2](https://github.com/radicand/pebble-lumon/commit/a2abdf2d47ed3244afd1d927011a5f9a36cc5420))
+
+
+### Bug Fixes
+
+* settings and grid ([4465122](https://github.com/radicand/pebble-lumon/commit/446512273785eabc97f9b83a7c315ea6041d2ff7))
+
 ## [1.1.1](https://github.com/radicand/pebble-lumon/compare/v1.1.0...v1.1.1) (2026-05-24)
 
 
