@@ -42,9 +42,8 @@ A short demo runs once when the watchface first loads (unless animation is Off).
 | | |
 | --- | --- |
 | ![Main watchface](screenshots/01-watchface.png) | The MDR grid with live time, date, and receiving bins |
-| ![KIER at the top of the hour](screenshots/02-kier-hour.png) | Top of the hour — the file bin shows **KIER** with a full bar |
-| ![MDR file rotation](screenshots/03-file-location.png) | Time and date on separate grid rows; file name and battery in the bins |
-| ![Collection animation](screenshots/04-collection.png) | Digits collect into a bin when the time changes |
+| ![KIER at the top of the hour](screenshots/02-kier-hour.png) | Top of the hour — **PRAISE KIER** in the file divider |
+| ![Collection animation](screenshots/03-collection.png) | Digits collect into a bin when the time changes |
 
 ## Building & Installing
 
