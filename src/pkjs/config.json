@@ -1,0 +1,43 @@
+[
+  {
+    "type": "heading",
+    "defaultValue": "LumonTime"
+  },
+  {
+    "type": "text",
+    "defaultValue": "Collection animation plays when time or date digits change on the watchface."
+  },
+  {
+    "type": "section",
+    "items": [
+      {
+        "type": "heading",
+        "defaultValue": "Animation"
+      },
+      {
+        "type": "radiogroup",
+        "messageKey": "ANIM_MODE",
+        "label": "Frequency",
+        "defaultValue": "1",
+        "options": [
+          {
+            "label": "Hourly (default)",
+            "value": "1"
+          },
+          {
+            "label": "Off",
+            "value": "0"
+          },
+          {
+            "label": "Every minute",
+            "value": "2"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "submit",
+    "defaultValue": "Save"
+  }
+]

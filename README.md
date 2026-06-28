@@ -1,76 +1,65 @@
 # LumonTime — A Severance-Inspired Pebble Watchface
 
-A fully-featured Pebble Time watchface styled after **Lumon Industries** from the TV series *Severance*, featuring the iconic terminal aesthetic with real-time data and an immersive grid-based display.
+A Pebble Time 2 watchface styled after **Lumon Industries** from the TV series *Severance*. It recreates the Macrodata Refinement terminal look: a wall of numbers, live time and date woven into the grid, and receiving bins that collect your stats.
 
-## Features
+**[Download on the Pebble App Store](https://apps.repebble.com/87e9be27ecf34f248efa8235)**
 
-### Visual Design
-- **Rasterized Lumon Logo** — Rendered from the official `lumon.industries` embedded font, preserving the distinctive extended letterforms and signature teardrop "O"
-- **MDR Data Grid** — Full-screen grid of pseudo-random digits (Macrodata Refinement style); time and date replace grid cells at randomized positions each minute
-- **Bright Cyan Palette** — High-contrast cyan-on-dark color scheme inspired by Lumon Industries intranet terminals
+## What You See
 
-### Data Display
+### The MDR Terminal
 
-#### Real-Time (Live on Device)
-- **Time** — Current hour and minute, replaces grid cells at a randomized position each minute
-- **Date** — Current day/month/year, replaces grid cells at a randomized position (guaranteed different row from time)
-- **Step Count** — Real-time daily step total via Pebble C `HealthService`
-- **Battery Percentage** — Real-time battery level via Pebble C `BatteryStateService`
+- **Lumon logo** at the top, drawn from the official lumon.industries typeface
+- **Number grid** filling the screen — digits shift each minute like the show's refinement terminals
+- **Time and date** appear inside the grid in larger type, centered, on different rows that change every minute (e.g. `12:34` and `WEDJUN24`)
+- **Cyan-on-dark palette** matching the Lumon intranet aesthetic
 
-#### Status Row (Top)
-- **Left:** `STEPS` — Displays the current daily step count, or `--` if health data is unavailable or not permitted
-- **Right:** Rotating **MDR file codename** (one of 20 from the show), or `PRAISE KIER` at the top of each hour
+### Receiving Bins
 
-#### Badge Row (Bottom)
-- **Left:** `BAT` — Battery percentage
-- **Right:** `DEPT MDR` — Department badge
+Three bins along the bottom — the trays where "refined" data lands in the show. Each shows a value and a fill bar.
+
+| Bin | Shows | Bar |
+| --- | --- | --- |
+| **ST** | Today's step count | Progress toward 10,000 steps |
+| **BT** | Battery percentage | Current charge level |
+| **File** | Active MDR file name | Progress through the current hour |
+
+The file name rotates through locations from the show — Tumwater, Cairns, Siena, Allentown, Wellington, Pacifica, Bellefonte, Nantucket, Cold Harbor. At the top of each hour it reads **KIER**.
+
+### Collection Animation
+
+When the time or date changes, the old digits break free from the grid and fly down into a bin, with funnel lines guiding them — just like data collection in MDR.
+
+You can choose how often this plays:
+
+- **Hourly** (default) — when the hour changes; date also animates at midnight
+- **Every minute** — on any time or date change
+- **Off** — static grid, no animation
+
+A short demo runs once when the watchface first loads (unless animation is Off). Change the setting from the watchface's settings page in the Pebble phone app.
+
+## Screenshots
+
+| | |
+| --- | --- |
+| ![Main watchface](screenshots/01-watchface.png) | The MDR grid with live time, date, and receiving bins |
+| ![KIER at the top of the hour](screenshots/02-kier-hour.png) | Top of the hour — **PRAISE KIER** in the file divider |
+| ![Collection animation](screenshots/03-collection.png) | Digits collect into a bin when the time changes |
 
 ## Building & Installing
 
-### Prerequisites
-- [Pebble SDK](https://developer.rebble.io/) installed
-- Pebble Time 2 (emery) or compatible device
+For developers with the [Pebble SDK](https://developer.rebble.io/) installed. Targets **Pebble Time 2**.
 
-### Build
 ```bash
 pebble build
+pebble install --emulator emery   # emulator
+pebble install                    # connected watch
 ```
 
-### Install on Emulator
-```bash
-pebble install --emulator emery
-```
-
-### Install on Device
-Connect your Pebble device and run:
-```bash
-pebble install
-```
-
-### Live Screenshot
-```bash
-pebble screenshot --emulator emery
-```
-
-## Technical Details
-
-### Data Sources
-
-**Battery** — Uses Pebble C `battery_state_service_peek()` and `battery_state_service_subscribe()` for real-time device power state. The displayed value is `BatteryChargeState.charge_percent`.
-
-**Steps** — Uses Pebble C `HealthService`. The watchface checks `health_service_metric_accessible(HealthMetricStepCount, time_start_of_today(), time(NULL))` before reading `health_service_sum_today(HealthMetricStepCount)`. Health events are subscribed so the display can refresh when movement data changes.
-
-### Architecture
-
-- **Native Pebble C SDK** — The watchface is now a `native` Pebble project; the previous Alloy/Moddable runtime dependency has been removed.
-- **Logo** — Bitmap rasterized from `lumon.industries` font, encoded as compact Pebble C rectangles
-- **Grid** — Deterministic pseudo-random digits seeded by cell position + time
-- **Date/Time Overlay** — Pseudo-random deterministic placement per minute; occupies grid cells instead of overlaying them; uses separate salts to ensure date and time never occupy the same row
-- **Rendering** — A custom layer redraws on minute ticks, health events, and battery changes; grid cells are skipped where date/time text appears
+Contributor tooling (`npm run outline`, `npm run lint:ast`) is documented in `AGENTS.md`.
 
 ## Inspiration
 
-This watchface is inspired by the **Lumon Industries MDR terminal** from *Severance*. The show features a dystopian corporation with heavily segregated employees ("innies" and "outies") who work in the mysterious Macrodata Refinement (MDR) department, analyzing data on grid-based terminals without knowing what they're processing.
+Inspired by the **Lumon Industries MDR terminal** from *Severance* — the mysterious Macrodata Refinement department where employees sort numbers on grid-based screens without knowing what the data means.
 
 ## Resources
 
@@ -80,8 +69,8 @@ This watchface is inspired by the **Lumon Industries MDR terminal** from *Severa
 
 ## License
 
-This watchface is a fan project inspired by *Severance*. Use and modify freely for personal use.
+Fan project inspired by *Severance*. Use and modify freely for personal use.
 
 ---
 
-**Status:** Production-ready for Pebble Time 2 (emery). Currently in active use. ⏰
+**Status:** Production-ready for Pebble Time 2. Currently in active use.

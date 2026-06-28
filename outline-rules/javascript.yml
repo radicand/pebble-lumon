@@ -1,0 +1,27 @@
+id: js-top-level-var
+language: JavaScript
+role: item
+symbolType: constant
+rule:
+  all:
+    - kind: variable_declaration
+    - has:
+        kind: variable_declarator
+        has:
+          field: name
+          pattern: $NAME
+    - inside:
+        kind: program
+        stopBy: neighbor
+name: $NAME
+isExported: false
+---
+id: js-event-listener
+language: JavaScript
+role: item
+symbolType: method
+rule:
+  pattern: Pebble.addEventListener($EVENT, $HANDLER)
+name: $EVENT
+signature: Pebble.addEventListener($EVENT, ...)
+isExported: false

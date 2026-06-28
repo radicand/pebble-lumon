@@ -1,0 +1,111 @@
+id: c-include
+language: C
+role: item
+symbolType: module
+rule:
+  kind: preproc_include
+  pattern: '#include $PATH'
+name: $PATH
+isImport: true
+isExported: false
+---
+id: c-extern
+language: C
+role: item
+symbolType: variable
+rule:
+  kind: declaration
+  pattern: extern $TYPE $NAME;
+name: $NAME
+isExported: false
+---
+id: c-typedef-struct
+language: C
+role: item
+symbolType: struct
+rule:
+  pattern: typedef struct { $$$FIELDS } $NAME;
+name: $NAME
+signature: typedef struct { ... } $NAME
+isExported: false
+---
+id: c-typedef-enum
+language: C
+role: item
+symbolType: enum
+rule:
+  pattern: typedef enum { $$$MEMBERS } $NAME;
+name: $NAME
+signature: typedef enum { ... } $NAME
+isExported: false
+---
+id: c-static-var
+language: C
+role: item
+symbolType: variable
+rule:
+  all:
+    - kind: declaration
+    - pattern: static $TYPE $NAME = $VALUE;
+    - inside:
+        kind: translation_unit
+        stopBy: neighbor
+    - not:
+        has:
+          field: declarator
+          regex: '\('
+name: $NAME
+isExported: false
+---
+id: c-static-var-no-init
+language: C
+role: item
+symbolType: variable
+rule:
+  all:
+    - kind: declaration
+    - pattern: static $TYPE $NAME;
+    - inside:
+        kind: translation_unit
+        stopBy: neighbor
+    - not:
+        has:
+          field: declarator
+          regex: '\('
+name: $NAME
+isExported: false
+---
+id: c-forward-decl
+language: C
+role: item
+symbolType: function
+rule:
+  all:
+    - kind: declaration
+    - has:
+        field: declarator
+        has:
+          kind: function_declarator
+          has:
+            field: declarator
+            pattern: $NAME
+    - inside:
+        kind: translation_unit
+        stopBy: neighbor
+name: $NAME
+isExported: false
+---
+id: c-function
+language: C
+role: item
+symbolType: function
+rule:
+  all:
+    - kind: function_definition
+    - has:
+        field: declarator
+        has:
+          field: declarator
+          pattern: $NAME
+name: $NAME
+isExported: false
